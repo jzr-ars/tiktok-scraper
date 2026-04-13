@@ -1,0 +1,77 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: tiktok
+      POSTGRES_PASSWORD: tiktok_secret
+      POSTGRES_DB: tiktok_scraper
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tiktok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis (for BullMQ)
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Elysia API Backend
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:3000"
+    environment:
+      DATABASE_URL: postgres://tiktok:tiktok_secret@postgres:5432/tiktok_scraper
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-me}
+      NODE_ENV: production
+      PORT: "3000"
+    volumes:
+      - downloads:/app/apps/api/downloads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Next.js Frontend
+  # NEXT_PUBLIC_API_URL is inlined when the web image is built. Set it in a project-root .env
+  # to the API URL as seen from the browser, e.g. http://YOUR_VPS_IP:5000 or https://api.example.com
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    restart: unless-stopped
+    ports:
+      - "5001:3001"
+    environment:
+      # Runtime only affects server-side code; client bundle already built with build args above
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+  downloads:

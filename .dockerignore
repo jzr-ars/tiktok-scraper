@@ -1,0 +1,7 @@
+node_modules
+.next
+.git
+downloads
+*.tar.gz
+deploy.ts
+deploy-helper.ts

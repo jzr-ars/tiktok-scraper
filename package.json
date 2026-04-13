@@ -1,0 +1,23 @@
+{
+  "name": "tiktok-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "deploy": "bun run deploy.ts",
+    "docker:local": "bash scripts/docker-local.sh",
+    "dev": "bun run --filter '*' dev",
+    "dev:api": "bun run --filter @tiktok/api dev",
+    "dev:web": "bun run --filter @tiktok/web dev",
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "ssh2": "^1.17.0"
+  }
+}
